@@ -1,0 +1,91 @@
+name: "Publish dbt docs"
+description: "Pushes dbt documentation to the Data Discovery Project for use in the Data Catalog"
+
+inputs:
+  
+  environment:
+    description: "Environment to send docs i.e. dev,test,prod"
+    required: true
+  
+  data_discovery_project_id:
+    description: "Data Discovery Project ID"
+    required: true
+
+  data_discovery_gcs_key:
+    description: "Data Discovery Cloud Storage Service Account Key"
+    required: true
+  
+  project_id:
+    description: "Google Cloud Project ID"
+    required: true
+  
+  gcs_key:
+    description: "Service Account Key for Accessing Google Cloud Storage"
+    required: true
+  
+  sf_username:
+    description: "Username for Snowflake Database"
+    required: true
+  
+  sf_password:
+    description: "Password for Snowflake instance"
+    required: true
+
+
+runs:
+  using: "composite"
+  steps:
+    - name: GCloud - Setup
+      uses: google-github-actions/setup-gcloud@master
+      with:
+        project_id: ${{ inputs.project_id }}
+        service_account_key: ${{ inputs.gcs_key }}
+        export_default_credentials: true
+
+    - id: dbt-get-secrets
+      uses: actions/setup-python@v1
+      with:
+        python-version: "3.8.12"
+    
+    - run:  pip3 install dbt==0.18.1
+    - run:  sudo mkdir -p /vault/secrets
+    - run:  'echo "${{ inputs.gcs_key }}" | base64 --decode | sudo dd of=/vault/secrets/bq-sa.json'
+
+    - id: dbt-docs-generate
+      env:
+        SF_USERNAME: ${{inputs.sf_username}}
+        SF_PASSWORD: ${{inputs.sf_password}}
+      run:  |
+        dbtProjectsList=(./dbt/*)
+        for i in ${dbtProjectsList[@]}; do
+          project="$(basename $i)"
+          echo "$i"
+          echo "$project"
+          cd "$i"
+          dbt docs generate --profiles-dir . --target ${{ inputs.environment }}
+          cd ../../
+        done
+      shell: bash
+
+    - name: GCloud - Setup
+      uses: google-github-actions/setup-gcloud@master
+      with:
+        project_id: ${{ inputs.data_discovery_project_id}}
+        service_account_key: ${{ inputs.data_discovery_gcs_key }}
+        export_default_credentials: true
+
+    - id: dbt-docs-to-bucket
+      run:  |
+        dbtProjectsList=(./dbt/*)
+        for i in ${dbtProjectsList[@]}; do
+          project="$(basename $i)"
+          echo "$i"
+          echo "$project"
+          cd "$i"
+          gsutil cp ./target/catalog.json 'gs://${{ inputs.data_discovery_project_id }}-dbt-docs/dbt-static-site/${{ inputs.environment }}/'${project}'/'
+          gsutil cp ./target/manifest.json 'gs://${{ inputs.data_discovery_project_id }}-dbt-docs/dbt-static-site/${{ inputs.environment }}/'${project}'/'
+          gsutil cp ./target/run_results.json 'gs://${{ inputs.data_discovery_project_id }}-dbt-docs/dbt-static-site/${{ inputs.environment }}/'${project}'/'
+          gsutil cp ./target/index.html 'gs://${{ sinputs.data_discovery_project_id }}-dbt-docs/dbt-static-site/${{ inputs.environment }}/'${project}'/'
+          cd ../../
+        done
+      shell: bash

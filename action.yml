@@ -64,6 +64,7 @@ runs:
           echo "$i"
           echo "$project"
           cd "$i"
+          dbt deps
           dbt docs generate --profiles-dir . --target ${{ inputs.environment }}
           cd ../../
         done

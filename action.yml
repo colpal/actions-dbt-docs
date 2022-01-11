@@ -47,9 +47,11 @@ runs:
       with:
         python-version: "3.8.12"
     
-    - run:  pip3 install dbt==0.21.0
-    - run:  sudo mkdir -p /vault/secrets
-    - run:  'echo "${{ inputs.gcs_key }}" | base64 --decode | sudo dd of=/vault/secrets/bq-sa.json'
+    - run:  |
+        pip3 install dbt==0.21.0 &&
+        sudo mkdir -p /vault/secrets &&
+        'echo "${{ inputs.gcs_key }}" | base64 --decode | sudo dd of=/vault/secrets/bq-sa.json'
+      shell: bash
 
     - id: dbt-docs-generate
       env:
@@ -85,7 +87,7 @@ runs:
           gsutil cp ./target/catalog.json 'gs://${{ inputs.data_discovery_project_id }}-dbt-docs/dbt-static-site/${{ inputs.environment }}/'${project}'/'
           gsutil cp ./target/manifest.json 'gs://${{ inputs.data_discovery_project_id }}-dbt-docs/dbt-static-site/${{ inputs.environment }}/'${project}'/'
           gsutil cp ./target/run_results.json 'gs://${{ inputs.data_discovery_project_id }}-dbt-docs/dbt-static-site/${{ inputs.environment }}/'${project}'/'
-          gsutil cp ./target/index.html 'gs://${{ sinputs.data_discovery_project_id }}-dbt-docs/dbt-static-site/${{ inputs.environment }}/'${project}'/'
+          gsutil cp ./target/index.html 'gs://${{ inputs.data_discovery_project_id }}-dbt-docs/dbt-static-site/${{ inputs.environment }}/'${project}'/'
           cd ../../
         done
       shell: bash

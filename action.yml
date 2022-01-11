@@ -47,7 +47,7 @@ runs:
       with:
         python-version: "3.8.12"
     
-    - run:  pip3 install dbt==0.18.1
+    - run:  pip3 install dbt==0.21.0
     - run:  sudo mkdir -p /vault/secrets
     - run:  'echo "${{ inputs.gcs_key }}" | base64 --decode | sudo dd of=/vault/secrets/bq-sa.json'
 

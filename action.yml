@@ -50,7 +50,7 @@ runs:
     - run:  |
         pip3 install dbt==0.21.0 &&
         sudo mkdir -p /vault/secrets &&
-        'echo "${{ inputs.gcs_key }}" | base64 --decode | sudo dd of=/vault/secrets/bq-sa.json'
+        echo "${{ inputs.gcs_key }}" | base64 --decode | sudo dd of=/vault/secrets/bq-sa.json
       shell: bash
 
     - id: dbt-docs-generate
